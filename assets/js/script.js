@@ -9,70 +9,93 @@ const selectBox = document.getElementById("select_box"),
  converterBtn = document.getElementById("converter_btn"),
  converterResult = document.getElementById("result");
 
+// Función auxiliar para mostrar errores 
+const showError = (message) => alert(message || "Ocurrió un error inesperado");
+
+// Obtener los datos desde la API
 const getValues = async (indicator = "") => {
     try {
-        const options = {
-            method: "GET"
-        },
-        res = await fetch(`${API}${indicator}` , options);
-        return res.ok ? await res.json() : alert("Recursos no disponibles")
+        const response = await fetch(`${API}${indicator}`, { method: "GET" });
+        if (!response.ok) throw new Error("Recursos no disponibles");
+        return await response.json();
     } catch (error) {
-        return error.message;
+        showError(error.message);
+        return null;
     }
 };
 
+// Llenar el select con los indicadores
 const fillSelectBox = async () => {
     const values = await getValues();
-    if(values) {
-        let html = "";
-        Array.from(Object.entries(values)).forEach((value) => {
-            if (
-                value[1].codigo === undefined ||
-                value[1].codigo === "tpm" ||
-                value[1].codigo === "tasa_desempleo"
-            ) {
-                console.log(`Indicador ${value[1].codigo} ignorado`);
-            } else {
-                html += `<option value="${value[1].codigo}">${value[1].nombre}</option>`;
-            }
-        });
-        selectBox.innerHTML = html;
-    }
-};
+    if (!values) return;
 
+    const optionsHTML = Object.entries(values)
+     .filter(
+        ([, value]) =>
+            value.codigo && value.codigo !== "tpm" && value.codigo !== "tasa_desempleo"
+     )
+     .map(
+        ([, value]) => 
+            `<option value="${value.codigo}">${value.nombre}</option>`
+     )
+     .join("");
+    
+     selectBox.innerHTML = optionsHTML;
+}
+
+//Renderizar el gráfico
 const renderChart = async (indicator) => {
-    const data = await getValues(indicator),
-    chartStatus = Chart.getChart("chart");
-    chartStatus != undefined ? chartStatus.destroy() : false;
+    const data = await getValues(indicator);
+    if (!data) return;
+
+    const chartInstance = Chart.getChart("chart");
+    if (chartInstance) chartInstance.destroy();
+
     Chart.defaults.color = "#d6ff00";
     new Chart("chart", prepareConfigChart("chart", data));
 };
 
-const getResults = async (_from, _to) => {
-    const values = await getValues(),
-     formatResult = (_from / values[`${_to}`].valor).toFixed(2);
-    let symbol = "$";
-    if (_to === "euro") {
-        symbol = "€";;
-    } else if (_to === "bitcoin") {
-        symbol = "₿";
+// Calcular y mostrar el resultado de conversión
+const getResults = async (amount, toCurrency) => {
+    const values = await getValues();
+    if (!values) return;
+
+    const conversionRate = values[toCurrency]?.valor;
+    if (!conversionRate) {
+        showError("No se encontró la tasa de cambio para la moneda seleccionada");
+        return;
     }
-    converterResult.innerHTML = `<span>${symbol} ${formatResult.replace(".", ",")}</span>`
+
+    const formattedResult = (amount / conversionRate).toFixed(2);
+    const symbol = 
+     toCurrency === "euro" ? "€" : toCurrency === "bitcoin" ? "₿" : "$";
+
+    converterResult.innerHTML = `<span>${symbol} ${formattedResult.replace( ".", ",")}</span>`;
 };
 
+//Inicializar select box
 fillSelectBox();
+
+//Event listener: Conversión al hacer click en el botón
 converterBtn.addEventListener("click", () => {
-  validate(Number(inputBox.value))
-    ? getResults(Number(inputBox.value), selectBox.value) &&
-      renderChart(selectBox.value)
-    : "";
+    const amount = Number(inputBox.value);
+    if (validate(amount)) {
+        getResults(amount, selectBox.value);
+        renderChart(selectBox.value)
+    } else {
+        showError("Debe ingresar un monto válido para hacer la conversión");
+    }
 });
 
+// Event listener: Conversión al presionar Enter
 document.addEventListener("keydown", (e) => {
-  e.key === "Enter"
-    ? inputBox.value != ""
-      ? getResults(Number(inputBox.value), selectBox.value) &&
-        renderChart(selectBox.value)
-      : alert("Debe ingresar un monto para convertir")
-    : "";
+  if (e.key === "Enter") {
+    const amount = Number(inputBox.value);
+    if (amount) {
+        getResults(amount, selectBox.value);
+        renderChart(selectBox.value);
+    } else {
+        showError("Debe ingresar un monto válido para hacer la conversión")
+    }
+  }
 });
