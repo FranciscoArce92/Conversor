@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Favicon -->
+     <link rel="shortcut icon" href="./assets/img/favicon/converter-ico.png" type="image/x-icon">
+    <!-- CSS Style Sheet -->
+     <link rel="stylesheet" href="./assets/css/style.css">
+    <title>Desafío 6 - Conversor de monedas</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Conversor de Divisas</h1>
+        <div class="CLP-input">
+            <p>Peso Chileno (CLP)</p>
+            <input type="number" id="input_box" min="0" placeholder="Ingrese un monto">
+        </div>
+        <div class="select-group">
+            <p>Divisa a convertir:</p>
+            <select id="select_box">
+                <option value="dolar">Dólar</option>
+            </select>
+        </div>
+        <button id="converter_btn">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            Convertir
+        </button>
+        <p id="result"></p>
+    </div>
+
+    <div class="container-chart">
+        <canvas id="chart" hidden></canvas>
+    </div>
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module" src="./assets/js/script.js"></script>
+</body>
+</html>
